@@ -164,3 +164,6 @@ lib64
 pyvenv.cfg
 bin/*
 Scripts/*
+include/*
+lib/*
+lib64/*
