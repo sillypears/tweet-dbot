@@ -160,3 +160,9 @@ cython_debug/
 #.idea/
 
 config.py
+lib64
+pyvenv.cfg
+bin/python
+bin/python3
+bin/python3.10
+Scripts/*
