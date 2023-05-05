@@ -1,11 +1,12 @@
 import discord
 import os
-from config import app_config
 from discord import app_commands
 import requests
+from config import Config
 
-conf = app_config['dev'] if os.environ.get('DEBUG') == True else app_config['prd'] 
+conf = Config(os.environ.get('DISCORD_TOKEN', 'failure'),os.environ.get('CLIENT_ID', 'failure'),os.environ.get('GUILD_ID', 'failure'))
 MY_GUILD = discord.Object(id=conf.GUILD_ID)
+
 
 class MyClient(discord.Client):
     def __init__(self, *, intents: discord.Intents):
@@ -32,21 +33,6 @@ intents.message_content = True
 
 client = MyClient(intents=intents)
 
-
-@client.tree.command(name='clear')
-# @app_commands.describe(text_to_send='Clear them tweets')
-async def clear_tweets(interaction: discord.Interaction ):
-    """ Clear Tweets lol """
-    res = requests.post('http://192.168.1.55:4999/clearNewTweets')
-    await interaction.response.send_message(f"Cleared {res.json()['cleared']} tweets!");
-    # await interaction.response.send_message("Hello!")
-
-@client.tree.context_menu(name='Clear Tweets')
-@app_commands.describe(text_to_send='Clear them tweets')
-async def test(interaction: discord.Interaction, message: discord.Message):
-    res = requests.post('http://192.168.1.55:4999/clearNewTweets')
-    await interaction.response.send_message(f"Cleared {res.json()['cleared']} tweets!");
-
 @client.event
 async def on_ready():
     print(f'We have logged in as {client.user}')
@@ -58,5 +44,34 @@ async def on_message(message):
 
     if message.content.startswith('$hello'):
         await message.channel.send('Hello!')
+
+@client.tree.command(name='clear')
+# @app_commands.describe(text_to_send='Clear them tweets')
+async def clear_tweets(interaction: discord.Interaction ):
+    """ Clear Tweets lol """
+    
+    try:
+        res = requests.post('http://192.168.1.55:4999/clearNewTweets')
+        if res.status_code == 200:
+            await interaction.response.send_message(f"Cleared {res.json()['cleared']} tweets!");
+        else:
+            await interaction.response.send_message(f"I don't know why this broke: {res.status_code}")
+    except Exception as e:
+        await interaction.response.send_message(f"Yo shit's broken: {e}");
+
+    # await interaction.response.send_message("Hello!")
+
+@client.tree.context_menu(name='Clear Tweets')
+@discord.app_commands.describe(text_to_send='Clear them tweets')
+async def test(interaction: discord.Interaction, message: discord.Message):
+    try:
+        res = requests.post('http://192.168.1.55:4999/clearNewTweets')
+        if res.status_code == 200:
+            await interaction.response.send_message(f"Cleared {res.json()['cleared']} tweets!");
+        else:
+            await interaction.response.send_message(f"I don't know why this broke: e-code {res.status_code}")
+    except Exception as e:
+        await interaction.response.send_message(f"Yo shit's broken: {e}");
+
 
 client.run(conf.DISCORD_TOKEN)
