@@ -1,12 +1,13 @@
 import discord
 import os
 from discord import app_commands
+from discord.ext import tasks
 import requests
 from config import Config
 
-conf = Config(os.environ.get('DISCORD_TOKEN', 'failure'),os.environ.get('CLIENT_ID', 'failure'),os.environ.get('GUILD_ID', 'failure'))
+conf = Config(os.environ.get('DISCORD_TOKEN', 'failure'),os.environ.get('CLIENT_ID', 'failure'),os.environ.get('GUILD_ID', 'failure'), os.environ.get('TWEET_CHANNEL_ID', 'failure'))
 MY_GUILD = discord.Object(id=conf.GUILD_ID)
-
+TWEET_CHANNEL = discord.Object(id=conf.TWEET_CHANNEL_ID)
 
 class MyClient(discord.Client):
     def __init__(self, *, intents: discord.Intents):
@@ -27,6 +28,9 @@ class MyClient(discord.Client):
         # This copies the global commands over to your guild.
         self.tree.copy_global_to(guild=MY_GUILD)
         await self.tree.sync(guild=MY_GUILD)
+        get_tweet_count.start()
+
+
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -73,5 +77,14 @@ async def test(interaction: discord.Interaction, message: discord.Message):
     except Exception as e:
         await interaction.response.send_message(f"Yo shit's broken: {e}");
 
+@tasks.loop(minutes=5, count=None)
+async def get_tweet_count():
+    await client.wait_until_ready()
+    res = requests.get('http://192.168.1.55:4999/getNewTweets')
+    if res.status_code == 200:
+        d = res.json()
+        channel = client.get_channel(TWEET_CHANNEL)
+        print(d, get_tweet_count.count, channel)
+        await channel.edit(topic=f"Tweets: {d['newTweets']}")
 
 client.run(conf.DISCORD_TOKEN)
